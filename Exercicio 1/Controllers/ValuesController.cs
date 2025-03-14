@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Exercicio_1.models;
+using Exercicio_1.Data;
+using System.Linq.Expressions;
 
 namespace Exercicio_1.Controllers
 {
@@ -8,56 +10,93 @@ namespace Exercicio_1.Controllers
     [ApiController]
     public class ValuesController : ControllerBase
     {
-        private static List<Cidade> Lista = new List<Cidade>();
+       // private static List<Cidade> Lista = new List<Cidade>();
+        private readonly AppDbContext _Context;
+
+        public ValuesController(AppDbContext context)
+        {
+            _Context = context;
+        }
+        // [HttpGet]
+        //[Route("Lista")]
+        // public List<Cidade> CidadeLista()
+        // {
+
+        //  return Lista;
+        // }
 
         [HttpGet]
-        [Route("Lista")]
-        public List<Cidade> CidadeLista()
+        public List<Cidade> GetCidade()
         {
-            return Lista;
+            var lista = _Context.Cidades.OrderBy(c => c.nome).ToList();
+            return lista;
         }
 
         [HttpPost]
 
-        public string PostCidade(Cidade cidade)
+        public IActionResult PostCidade([FromBody] Cidade cidade)
         {
-            Lista.Add(cidade);
-            return "Cidade cadastrada com sucesso";
+            try
+            {
+                _Context.Cidades.Add(cidade);
+                _Context.SaveChanges();
+                return Ok("Cidade cadastrada com sucesso");
+            }
+            catch (Exception ex) {
+                return BadRequest("erro ao incluir a ciade. " + ex.Message);
+            }
         }
 
         [HttpPut]
 
-        public string PutCidade(Cidade cidade)
+        public IActionResult PutCidade([FromBody] Cidade cidade)
         {
-            var cidadeExiste = Lista
+            var cidadeExiste = _Context.Cidades
                                .Where(l => l.codigo == cidade.codigo)
                                .FirstOrDefault();
             if (cidadeExiste != null)
             {
-                cidadeExiste.nome = cidade.nome;
-                return "Cidade alterada com sucesso";
+                try
+                {
+                    cidadeExiste.nome = cidade.nome;
+                    _Context.Cidades.Update(cidadeExiste);
+                    _Context.SaveChanges();
+                    return Ok ("Cidade alterada com sucesso");
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest("erro ao alterar cidade. " + ex.Message);
+                }
             }
             else
             {
-                return "Cidade nao encontrada";
+                return NotFound ("Cidade nao encontrada");
             }
         }
 
-        [HttpDelete]
+        [HttpDelete("{codigo}")]
 
-        public string DeleteCidade(Cidade cidade)
+        public IActionResult DeleteCidade([FromRoute] int codigo)
         {
-            var cidadeExiste = Lista
-                               .Where(l => l.codigo == cidade.codigo)
+            var cidadeExiste = _Context.Cidades
+                               .Where(l => l.codigo == codigo)
                                .FirstOrDefault();
             if (cidadeExiste != null)
             {
-                Lista.Remove(cidadeExiste);
-                return "Cidade excluida com sucesso";
+                try
+                {
+                    _Context.Cidades.Remove(cidadeExiste);
+                    _Context.SaveChanges();
+                    return Ok("Cidade excluida com sucesso");
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest("Erro ao excluir cidade. " + ex.Message);
+                }
             }
             else
             {
-                return "Cidade nao encontrada";
+                return NotFound("Cidade não encontrado!");
             }
         }
     }
